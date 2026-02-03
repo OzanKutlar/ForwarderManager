@@ -542,7 +542,7 @@
 
                         <div class="form-group">
                             <label>SSH Host</label>
-                            <input type="text" id="sshHost" placeholder="your-vps.com" required>
+                            <input type="text" id="sshHost" placeholder="Auto-detected from URL" required>
                         </div>
                     </div>
 
@@ -575,7 +575,7 @@
                 <form id="tempUserForm">
                     <div class="form-group">
                         <label>VPS Host</label>
-                        <input type="text" id="tempUserHost" placeholder="your-vps.com" required>
+                        <input type="text" id="tempUserHost" placeholder="Auto-detected from URL" required>
                     </div>
 
                     <div class="grid-2">
@@ -674,10 +674,23 @@
         });
 
         // Copy command to clipboard
-        function copyCommand() {
+        async function copyCommand() {
             const text = document.getElementById('commandText').textContent;
-            navigator.clipboard.writeText(text);
-            showNotification('Command copied to clipboard!');
+            try {
+                await navigator.clipboard.writeText(text);
+                showNotification('Command copied to clipboard!');
+            } catch (error) {
+                // Fallback for older browsers
+                const textarea = document.createElement('textarea');
+                textarea.value = text;
+                textarea.style.position = 'fixed';
+                textarea.style.opacity = '0';
+                document.body.appendChild(textarea);
+                textarea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textarea);
+                showNotification('Command copied to clipboard!');
+            }
         }
 
         // Create Temporary User
@@ -809,9 +822,22 @@
         }
 
         // Copy config command
-        function copyConfig(command) {
-            navigator.clipboard.writeText(command);
-            showNotification('Command copied to clipboard!');
+        async function copyConfig(command) {
+            try {
+                await navigator.clipboard.writeText(command);
+                showNotification('Command copied to clipboard!');
+            } catch (error) {
+                // Fallback for older browsers
+                const textarea = document.createElement('textarea');
+                textarea.value = command;
+                textarea.style.position = 'fixed';
+                textarea.style.opacity = '0';
+                document.body.appendChild(textarea);
+                textarea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textarea);
+                showNotification('Command copied to clipboard!');
+            }
         }
 
         // Delete configuration
@@ -846,6 +872,13 @@
 
         // Auto-refresh temp users every 30 seconds
         setInterval(loadTempUsers, 30000);
+
+        // Auto-populate SSH host from current domain
+        window.addEventListener('DOMContentLoaded', () => {
+            const currentHost = window.location.hostname;
+            document.getElementById('sshHost').value = currentHost;
+            document.getElementById('tempUserHost').value = currentHost;
+        });
     </script>
 </body>
 </html>

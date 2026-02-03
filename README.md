@@ -5,10 +5,12 @@ A sleek, modern web application for managing SSH port forwarding commands and cr
 ## Features
 
 - **Command Generator**: Never remember complex SSH port forwarding syntax again
+- **Auto-Detection**: SSH host is automatically detected from the URL you're accessing
 - **Configuration Management**: Save and manage multiple port forwarding configurations
 - **Temporary User Creation**: Create restricted users with no permissions for sharing
 - **Modern UI**: Sleek interface with smooth animations and cyberpunk-inspired design
 - **Auto-expiration**: Temporary users automatically expire after a set time
+- **Cross-browser Copy**: Clipboard copying works in all modern browsers
 
 ## Prerequisites
 
@@ -55,7 +57,7 @@ The server will start on `http://localhost:5000`. Access the web interface by na
    - **Remote Port**: The port on the remote server
    - **Remote Host**: Usually "localhost" for standard forwarding
    - **SSH User**: Your username on the VPS
-   - **SSH Host**: Your VPS hostname or IP
+   - **SSH Host**: Auto-detected from the URL (e.g., if accessing via `http://82.118.227.31:5000`, the SSH host will be `82.118.227.31`)
    - **SSH Port**: SSH port (default: 22)
    - **Reverse Port Forwarding**: Check this for reverse tunnels
 
