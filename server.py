@@ -68,7 +68,7 @@ def generate_ssh_command(local_port, remote_host, remote_port, ssh_user, ssh_hos
         cmd += f" -p {ssh_port}"
     
     # Add flags for background and connection keep-alive
-    cmd += " -N -f"
+    cmd += " -N"
     
     return cmd
 
