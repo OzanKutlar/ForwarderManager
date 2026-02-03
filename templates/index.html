@@ -1,0 +1,851 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SSH Port Forwarding Manager</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600;800&family=Sora:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0a0e27;
+            --bg-secondary: #141938;
+            --bg-tertiary: #1e2749;
+            --accent-primary: #00d9ff;
+            --accent-secondary: #7000ff;
+            --text-primary: #e8eaed;
+            --text-secondary: #9da3b4;
+            --text-tertiary: #6b7280;
+            --success: #00ff88;
+            --error: #ff0055;
+            --border: rgba(255, 255, 255, 0.08);
+            --shadow: rgba(0, 0, 0, 0.4);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Sora', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            overflow-x: hidden;
+            position: relative;
+            min-height: 100vh;
+        }
+
+        /* Animated background */
+        body::before {
+            content: '';
+            position: fixed;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: 
+                radial-gradient(circle at 20% 30%, rgba(0, 217, 255, 0.05) 0%, transparent 40%),
+                radial-gradient(circle at 80% 70%, rgba(112, 0, 255, 0.05) 0%, transparent 40%);
+            animation: backgroundPulse 20s ease-in-out infinite;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        @keyframes backgroundPulse {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            50% { transform: translate(-5%, 5%) scale(1.05); }
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 40px 20px;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Header */
+        header {
+            text-align: center;
+            margin-bottom: 60px;
+            animation: slideDown 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        h1 {
+            font-size: 3.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 12px;
+            letter-spacing: -0.02em;
+        }
+
+        .subtitle {
+            font-size: 1.1rem;
+            color: var(--text-secondary);
+            font-weight: 300;
+        }
+
+        /* Grid Layout */
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+
+        @media (max-width: 1024px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Card Styles */
+        .card {
+            background: var(--bg-secondary);
+            border-radius: 20px;
+            border: 1px solid var(--border);
+            padding: 30px;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            animation: fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+        }
+
+        .card:nth-child(1) { animation-delay: 0.1s; }
+        .card:nth-child(2) { animation-delay: 0.2s; }
+        .card:nth-child(3) { animation-delay: 0.3s; }
+        .card:nth-child(4) { animation-delay: 0.4s; }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--accent-primary), transparent);
+            transform: scaleX(0);
+            transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .card:hover::before {
+            transform: scaleX(1);
+        }
+
+        .card:hover {
+            transform: translateY(-4px);
+            border-color: rgba(0, 217, 255, 0.2);
+            box-shadow: 0 20px 60px rgba(0, 217, 255, 0.1);
+        }
+
+        .card-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .card-title::before {
+            content: '';
+            width: 4px;
+            height: 24px;
+            background: linear-gradient(180deg, var(--accent-primary), var(--accent-secondary));
+            border-radius: 2px;
+        }
+
+        /* Form Styles */
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        input[type="text"],
+        input[type="number"],
+        select {
+            width: 100%;
+            padding: 14px 18px;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            color: var(--text-primary);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.95rem;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            outline: none;
+        }
+
+        input:focus,
+        select:focus {
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 0 4px rgba(0, 217, 255, 0.1);
+            transform: translateY(-2px);
+        }
+
+        input::placeholder {
+            color: var(--text-tertiary);
+        }
+
+        /* Checkbox */
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+            accent-color: var(--accent-primary);
+        }
+
+        .checkbox-group label {
+            margin: 0;
+            cursor: pointer;
+            text-transform: none;
+            font-weight: 400;
+            letter-spacing: normal;
+        }
+
+        /* Buttons */
+        button {
+            padding: 14px 28px;
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            border: none;
+            border-radius: 12px;
+            color: white;
+            font-family: 'Sora', sans-serif;
+            font-weight: 600;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        button::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.2);
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+        }
+
+        button:hover::before {
+            width: 300px;
+            height: 300px;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(0, 217, 255, 0.3);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button.secondary {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+        }
+
+        button.secondary:hover {
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        button.danger {
+            background: linear-gradient(135deg, #ff0055, #ff3366);
+        }
+
+        /* Code Display */
+        .command-output {
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 20px;
+            position: relative;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .command-output.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .command-output pre {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+            color: var(--accent-primary);
+            white-space: pre-wrap;
+            word-break: break-all;
+            margin: 0;
+        }
+
+        .copy-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            padding: 8px 16px;
+            font-size: 0.85rem;
+        }
+
+        /* List Items */
+        .list-item {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 16px 20px;
+            margin-bottom: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            animation: slideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .list-item:hover {
+            border-color: var(--accent-primary);
+            transform: translateX(4px);
+        }
+
+        .list-item-content {
+            flex: 1;
+        }
+
+        .list-item-title {
+            font-weight: 600;
+            font-size: 1rem;
+            margin-bottom: 4px;
+        }
+
+        .list-item-meta {
+            font-size: 0.85rem;
+            color: var(--text-tertiary);
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .list-item-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn-small {
+            padding: 8px 16px;
+            font-size: 0.85rem;
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-tertiary);
+        }
+
+        .empty-state-icon {
+            font-size: 3rem;
+            margin-bottom: 16px;
+            opacity: 0.3;
+        }
+
+        /* Notification */
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 16px 20px;
+            box-shadow: 0 10px 40px var(--shadow);
+            z-index: 1000;
+            transform: translateX(400px);
+            transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .notification.show {
+            transform: translateX(0);
+        }
+
+        .notification.success {
+            border-color: var(--success);
+        }
+
+        .notification.error {
+            border-color: var(--error);
+        }
+
+        /* Loading Spinner */
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.2);
+            border-top-color: var(--accent-primary);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* User Info Box */
+        .user-info-box {
+            background: var(--bg-primary);
+            border: 1px solid var(--accent-primary);
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 20px;
+            animation: fadeInUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .user-info-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+        }
+
+        .user-info-label {
+            color: var(--text-secondary);
+        }
+
+        .user-info-value {
+            color: var(--accent-primary);
+            font-weight: 600;
+        }
+
+        /* Grid for smaller items */
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        /* Full width */
+        .full-width {
+            grid-column: 1 / -1;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2.5rem;
+            }
+
+            .grid-2 {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>SSH Port Forwarding Manager</h1>
+            <p class="subtitle">Never remember SSH commands again</p>
+        </header>
+
+        <div class="grid">
+            <!-- Generate Command Card -->
+            <div class="card">
+                <h2 class="card-title">Generate Command</h2>
+                <form id="commandForm">
+                    <div class="form-group">
+                        <label>Configuration Name</label>
+                        <input type="text" id="configName" placeholder="My Port Forward" required>
+                    </div>
+
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label>Local Port</label>
+                            <input type="number" id="localPort" placeholder="8080" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Remote Port</label>
+                            <input type="number" id="remotePort" placeholder="80" required>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Remote Host</label>
+                        <input type="text" id="remoteHost" placeholder="localhost" value="localhost" required>
+                    </div>
+
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label>SSH User</label>
+                            <input type="text" id="sshUser" placeholder="username" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label>SSH Host</label>
+                            <input type="text" id="sshHost" placeholder="your-vps.com" required>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>SSH Port</label>
+                        <input type="number" id="sshPort" placeholder="22" value="22" required>
+                    </div>
+
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="reverseForward">
+                        <label for="reverseForward">Reverse Port Forwarding</label>
+                    </div>
+
+                    <button type="submit">Generate SSH Command</button>
+                </form>
+
+                <div class="command-output" id="commandOutput">
+                    <button class="copy-btn btn-small" onclick="copyCommand()">Copy</button>
+                    <pre id="commandText"></pre>
+                </div>
+            </div>
+
+            <!-- Create Temp User Card -->
+            <div class="card">
+                <h2 class="card-title">Share with Friends</h2>
+                <p style="color: var(--text-secondary); margin-bottom: 20px; font-size: 0.95rem;">
+                    Create a temporary user with no permissions for friends to use your VPS for port forwarding.
+                </p>
+
+                <form id="tempUserForm">
+                    <div class="form-group">
+                        <label>VPS Host</label>
+                        <input type="text" id="tempUserHost" placeholder="your-vps.com" required>
+                    </div>
+
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label>SSH Port</label>
+                            <input type="number" id="tempUserPort" placeholder="22" value="22" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Expires In (Hours)</label>
+                            <input type="number" id="expiresHours" placeholder="24" value="24" required>
+                        </div>
+                    </div>
+
+                    <button type="submit">Create Temporary User</button>
+                </form>
+
+                <div id="newUserInfo"></div>
+            </div>
+
+            <!-- Saved Configs Card -->
+            <div class="card full-width">
+                <h2 class="card-title">Saved Configurations</h2>
+                <div id="configsList">
+                    <div class="empty-state">
+                        <div class="empty-state-icon">◇</div>
+                        <p>No saved configurations yet</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Temp Users Card -->
+            <div class="card full-width">
+                <h2 class="card-title">Active Temporary Users</h2>
+                <div id="tempUsersList">
+                    <div class="empty-state">
+                        <div class="empty-state-icon">◇</div>
+                        <p>No temporary users created</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="notification" class="notification"></div>
+
+    <script>
+        // API Base URL
+        const API_BASE = '';
+
+        // Show notification
+        function showNotification(message, type = 'success') {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            notification.className = `notification ${type}`;
+            setTimeout(() => notification.classList.add('show'), 10);
+            setTimeout(() => notification.classList.remove('show'), 3000);
+        }
+
+        // Generate SSH Command
+        document.getElementById('commandForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const data = {
+                name: document.getElementById('configName').value,
+                localPort: document.getElementById('localPort').value,
+                remotePort: document.getElementById('remotePort').value,
+                remoteHost: document.getElementById('remoteHost').value,
+                sshUser: document.getElementById('sshUser').value,
+                sshHost: document.getElementById('sshHost').value,
+                sshPort: document.getElementById('sshPort').value,
+                reverse: document.getElementById('reverseForward').checked
+            };
+
+            try {
+                const response = await fetch(`${API_BASE}/api/generate-command`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    const output = document.getElementById('commandOutput');
+                    document.getElementById('commandText').textContent = result.command;
+                    output.classList.add('show');
+                    showNotification('Command generated successfully!');
+                    loadConfigs();
+                } else {
+                    showNotification('Error: ' + result.error, 'error');
+                }
+            } catch (error) {
+                showNotification('Failed to generate command', 'error');
+            }
+        });
+
+        // Copy command to clipboard
+        function copyCommand() {
+            const text = document.getElementById('commandText').textContent;
+            navigator.clipboard.writeText(text);
+            showNotification('Command copied to clipboard!');
+        }
+
+        // Create Temporary User
+        document.getElementById('tempUserForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const data = {
+                sshHost: document.getElementById('tempUserHost').value,
+                sshPort: document.getElementById('tempUserPort').value,
+                expiresHours: document.getElementById('expiresHours').value
+            };
+
+            try {
+                const response = await fetch(`${API_BASE}/api/create-temp-user`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    const user = result.user;
+                    const infoBox = document.getElementById('newUserInfo');
+                    infoBox.innerHTML = `
+                        <div class="user-info-box">
+                            <div class="user-info-row">
+                                <span class="user-info-label">Username:</span>
+                                <span class="user-info-value">${user.username}</span>
+                            </div>
+                            <div class="user-info-row">
+                                <span class="user-info-label">Password:</span>
+                                <span class="user-info-value">${user.password}</span>
+                            </div>
+                            <div class="user-info-row">
+                                <span class="user-info-label">SSH Host:</span>
+                                <span class="user-info-value">${user.sshHost}</span>
+                            </div>
+                            <div class="user-info-row">
+                                <span class="user-info-label">SSH Port:</span>
+                                <span class="user-info-value">${user.sshPort}</span>
+                            </div>
+                            <div class="user-info-row">
+                                <span class="user-info-label">Expires:</span>
+                                <span class="user-info-value">${new Date(user.expiresAt).toLocaleString()}</span>
+                            </div>
+                        </div>
+                    `;
+                    showNotification('Temporary user created!');
+                    loadTempUsers();
+                } else {
+                    showNotification('Error: ' + result.error, 'error');
+                }
+            } catch (error) {
+                showNotification('Failed to create user', 'error');
+            }
+        });
+
+        // Load saved configurations
+        async function loadConfigs() {
+            try {
+                const response = await fetch(`${API_BASE}/api/configs`);
+                const result = await response.json();
+
+                const list = document.getElementById('configsList');
+
+                if (result.configs && result.configs.length > 0) {
+                    list.innerHTML = result.configs.map((config, index) => `
+                        <div class="list-item" style="animation-delay: ${index * 0.05}s">
+                            <div class="list-item-content">
+                                <div class="list-item-title">${config.name}</div>
+                                <div class="list-item-meta">
+                                    ${config.localPort} → ${config.sshHost}:${config.remotePort}
+                                    ${config.reverse ? '(Reverse)' : ''}
+                                </div>
+                            </div>
+                            <div class="list-item-actions">
+                                <button class="btn-small secondary" onclick="copyConfig('${config.command}')">Copy</button>
+                                <button class="btn-small danger" onclick="deleteConfig(${config.id})">Delete</button>
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    list.innerHTML = `
+                        <div class="empty-state">
+                            <div class="empty-state-icon">◇</div>
+                            <p>No saved configurations yet</p>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Failed to load configs:', error);
+            }
+        }
+
+        // Load temporary users
+        async function loadTempUsers() {
+            try {
+                const response = await fetch(`${API_BASE}/api/temp-users`);
+                const result = await response.json();
+
+                const list = document.getElementById('tempUsersList');
+
+                if (result.users && result.users.length > 0) {
+                    list.innerHTML = result.users.map((user, index) => `
+                        <div class="list-item" style="animation-delay: ${index * 0.05}s">
+                            <div class="list-item-content">
+                                <div class="list-item-title">${user.username}</div>
+                                <div class="list-item-meta">
+                                    Expires: ${new Date(user.expiresAt).toLocaleString()}
+                                </div>
+                            </div>
+                            <div class="list-item-actions">
+                                <button class="btn-small danger" onclick="deleteTempUser('${user.username}')">Delete</button>
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    list.innerHTML = `
+                        <div class="empty-state">
+                            <div class="empty-state-icon">◇</div>
+                            <p>No temporary users created</p>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Failed to load temp users:', error);
+            }
+        }
+
+        // Copy config command
+        function copyConfig(command) {
+            navigator.clipboard.writeText(command);
+            showNotification('Command copied to clipboard!');
+        }
+
+        // Delete configuration
+        async function deleteConfig(id) {
+            if (!confirm('Delete this configuration?')) return;
+
+            try {
+                await fetch(`${API_BASE}/api/configs/${id}`, { method: 'DELETE' });
+                showNotification('Configuration deleted');
+                loadConfigs();
+            } catch (error) {
+                showNotification('Failed to delete configuration', 'error');
+            }
+        }
+
+        // Delete temporary user
+        async function deleteTempUser(username) {
+            if (!confirm('Delete this temporary user?')) return;
+
+            try {
+                await fetch(`${API_BASE}/api/temp-users/${username}`, { method: 'DELETE' });
+                showNotification('User deleted');
+                loadTempUsers();
+            } catch (error) {
+                showNotification('Failed to delete user', 'error');
+            }
+        }
+
+        // Load data on page load
+        loadConfigs();
+        loadTempUsers();
+
+        // Auto-refresh temp users every 30 seconds
+        setInterval(loadTempUsers, 30000);
+    </script>
+</body>
+</html>
