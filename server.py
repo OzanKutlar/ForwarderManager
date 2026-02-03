@@ -204,8 +204,14 @@ def create_temp_user_endpoint():
         # Save to temp users list
         temp_users = load_temp_users()
         
-        # Set expiration (default 24 hours)
-        expires_hours = data.get('expiresHours', 24)
+        # --- FIX STARTS HERE ---
+        # Cast input to int to prevent timedelta error
+        try:
+            expires_hours = int(data.get('expiresHours', 24))
+        except (ValueError, TypeError):
+            expires_hours = 24 # Fallback if invalid data is sent
+        # --- FIX ENDS HERE ---
+
         expires_at = (datetime.now() + timedelta(hours=expires_hours)).isoformat()
         
         user_data = {
